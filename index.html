@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hangman – The Revision Station</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #00C5C8;
+    --teal-dark: #00a0a3;
+    --purple: #9B6FD4;
+    --purple-light: #c4a0f0;
+    --yellow: #FFD93D;
+    --coral: #FF6B6B;
+    --green: #4CAF50;
+    --white: #FFFFFF;
+    --dark: #1a1a2e;
+    --shadow: 4px 4px 0px #1a1a2e;
+    --shadow-lg: 6px 6px 0px #1a1a2e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--teal);
+    background-image: radial-gradient(circle at 15% 25%, rgba(255,255,255,0.15) 0%, transparent 40%),
+                      radial-gradient(circle at 85% 75%, rgba(155,111,212,0.2) 0%, transparent 40%);
+    min-height:100vh; padding:8px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .floaties { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; z-index:0; }
+  .floaty { position:absolute; font-size:1.8rem; opacity:0.1; animation: float 6s ease-in-out infinite; }
+  .floaty:nth-child(1){top:5%;left:3%;animation-delay:0s}
+  .floaty:nth-child(2){top:15%;right:5%;animation-delay:1s}
+  .floaty:nth-child(3){top:50%;left:2%;animation-delay:2s}
+  .floaty:nth-child(4){top:70%;right:3%;animation-delay:0.5s}
+  .floaty:nth-child(5){top:85%;left:8%;animation-delay:1.5s}
+  .floaty:nth-child(6){top:35%;right:2%;animation-delay:3s}
+  @keyframes float { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-15px) rotate(5deg)} }
+  .container { width:100%; max-width:800px; position:relative; z-index:1; }
+  .header { text-align:center; margin-bottom:6px; animation: slideDown 0.6s ease-out; }
+  @keyframes slideDown { from{opacity:0;transform:translateY(-30px)} to{opacity:1;transform:translateY(0)} }
+  .logo-img { width:60px; height:60px; object-fit:contain; filter:drop-shadow(3px 3px 0px rgba(0,0,0,0.3)); margin-bottom:3px; }
+  .header h1 { font-family:'Fredoka One',cursive; font-size:clamp(1.2rem,3vw,1.6rem); color:var(--white); text-shadow:3px 3px 0px var(--dark); }
+  .header p { color:var(--dark); font-size:0.9rem; font-weight:700; margin-top:3px; background:var(--yellow); display:inline-block; padding:3px 12px; border-radius:20px; border:2px solid var(--dark); }
+  .level-screen { text-align:center; }
+  .level-screen h2 { font-family:'Fredoka One',cursive; font-size:1.8rem; color:var(--dark); margin-bottom:8px; }
+  .level-screen p { color:#555; font-size:1rem; margin-bottom:20px; font-weight:600; }
+  .level-buttons { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .level-btn { padding:16px 28px; font-family:'Fredoka One',cursive; font-size:1.3rem; border:3px solid var(--dark); border-radius:16px; cursor:pointer; box-shadow:var(--shadow-lg); transition:all 0.15s ease; color:var(--dark); min-width:160px; }
+  .level-btn:hover { transform:translate(-2px,-2px); box-shadow:8px 8px 0px var(--dark); }
+  .level-btn.beginner { background:#b8f0b8; }
+  .level-btn.medium { background:#ffd6a5; }
+  .level-btn.advanced { background:#ffb3c6; }
+  .game-screen { display:none; }
+  .game-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
+  .level-badge { font-family:'Fredoka One',cursive; font-size:0.9rem; padding:5px 14px; border-radius:20px; border:2px solid var(--dark); box-shadow:2px 2px 0 var(--dark); }
+  .level-badge.beginner { background:#b8f0b8; }
+  .level-badge.medium { background:#ffd6a5; }
+  .level-badge.advanced { background:#ffb3c6; }
+  .score-area { font-family:'Fredoka One',cursive; font-size:1rem; color:var(--white); text-shadow:1px 1px 0 var(--dark); }
+  .hangman-wrap { display:flex; justify-content:center; margin-bottom:16px; }
+  #hangmanSvg { width:120px; height:120px; }
+  #hangmanSvg line, #hangmanSvg circle { stroke:var(--dark); stroke-width:4; stroke-linecap:round; fill:none; }
+  .word-display { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+  .letter-box { width:30px; height:36px; border-bottom:3px solid var(--dark); display:flex; align-items:flex-end; justify-content:center; font-family:'Fredoka One',cursive; font-size:1.1rem; color:var(--dark); padding-bottom:2px; transition:all 0.3s ease; }
+  .letter-box.space { border-bottom:none; width:16px; }
+  .letter-box.revealed { color:var(--purple); }
+  .letter-box.wrong-reveal { color:var(--coral); }
+  .wrong-area { text-align:center; margin-bottom:16px; min-height:32px; }
+  .wrong-label { font-weight:800; font-size:0.85rem; color:#888; margin-bottom:4px; }
+  .wrong-letters { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
+  .wrong-letter { background:#ffd6d6; border:2px solid var(--coral); border-radius:8px; padding:2px 8px; font-family:'Fredoka One',cursive; font-size:1rem; color:var(--coral); }
+  .lives-bar { display:flex; justify-content:center; gap:4px; margin-bottom:16px; }
+  .heart { font-size:1.3rem; transition:all 0.3s; }
+  .heart.lost { opacity:0.2; filter:grayscale(1); transform:scale(0.8); }
+  .keyboard { display:flex; flex-direction:column; gap:6px; align-items:center; margin-bottom:16px; }
+  .key-row { display:flex; gap:5px; flex-wrap:wrap; justify-content:center; }
+  .key-btn { width:28px; height:28px; font-family:'Fredoka One',cursive; font-size:1rem; border:2px solid var(--dark); border-radius:8px; cursor:pointer; background:var(--white); box-shadow:2px 2px 0 var(--dark); transition:all 0.1s ease; color:var(--dark); }
+  .key-btn:hover:not(:disabled) { background:#f0e8ff; transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--dark); }
+  .key-btn:active:not(:disabled) { transform:translate(1px,1px); box-shadow:1px 1px 0 var(--dark); }
+  .key-btn.correct { background:#b8f0b8; border-color:#2d8a2d; box-shadow:2px 2px 0 #2d8a2d; color:#2d8a2d; cursor:default; }
+  .key-btn.wrong { background:#ffd6d6; border-color:var(--coral); box-shadow:2px 2px 0 var(--coral); color:var(--coral); cursor:default; }
+  .key-btn:disabled { cursor:default; }
+  .hint-area { text-align:center; margin-bottom:12px; }
+  .hint-btn { background:var(--yellow); border:2px solid var(--dark); border-radius:12px; padding:6px 16px; font-family:'Fredoka One',cursive; font-size:1rem; cursor:pointer; box-shadow:var(--shadow); transition:all 0.15s; }
+  .hint-btn:hover { transform:translate(-1px,-1px); box-shadow:var(--shadow-lg); }
+  .hint-box { margin-top:8px; background:#f0e8ff; border:2px solid var(--purple-light); border-radius:12px; padding:10px 16px; font-size:0.95rem; font-weight:700; color:var(--dark); display:none; animation:fadeUp 0.3s ease; }
+  .hint-box.show { display:block; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .result-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:100; align-items:center; justify-content:center; }
+  .result-overlay.show { display:flex; }
+  .result-card { background:var(--white); border:3px solid var(--dark); border-radius:20px; padding:32px; text-align:center; max-width:400px; width:90%; box-shadow:var(--shadow-lg); animation:fadeUp 0.4s ease; }
+  .result-emoji { font-size:4rem; display:block; margin-bottom:12px; }
+  .result-title { font-family:'Fredoka One',cursive; font-size:2rem; color:var(--dark); margin-bottom:8px; }
+  .result-word { font-family:'Fredoka One',cursive; font-size:1.3rem; color:var(--purple); margin-bottom:8px; }
+  .result-def { font-size:0.95rem; color:#555; line-height:1.5; margin-bottom:20px; }
+  .result-score { background:var(--yellow); border:2px solid var(--dark); border-radius:50px; padding:6px 20px; font-family:'Fredoka One',cursive; font-size:1.1rem; display:inline-block; margin-bottom:20px; box-shadow:var(--shadow); }
+  .result-btns { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .play-again-btn { padding:12px 28px; font-family:'Fredoka One',cursive; font-size:1.1rem; background:var(--purple); color:var(--white); border:3px solid var(--dark); border-radius:14px; cursor:pointer; box-shadow:var(--shadow); transition:all 0.15s; }
+  .play-again-btn:hover { transform:translate(-1px,-1px); box-shadow:var(--shadow-lg); background:#7f55c0; }
+  .change-level-btn { padding:12px 28px; font-family:'Fredoka One',cursive; font-size:1.1rem; background:var(--yellow); color:var(--dark); border:3px solid var(--dark); border-radius:14px; cursor:pointer; box-shadow:var(--shadow); transition:all 0.15s; }
+  .change-level-btn:hover { transform:translate(-1px,-1px); box-shadow:var(--shadow-lg); }
+  @media(max-width:480px) { .key-btn { width:30px; height:30px; font-size:0.85rem; } .letter-box { width:28px; font-size:1.1rem; } }
+</style>
+</head>
+<body>
+<div class="floaties">
+  <div class="floaty">📚</div><div class="floaty">✏️</div><div class="floaty">🦉</div>
+  <div class="floaty">⭐</div><div class="floaty">📝</div><div class="floaty">🎓</div>
+</div>
+<div class="container">
+  <div class="header">
+    <img src="https://therevisionstation.wixsite.com/my-site-3/logo" class="logo-img" alt="The Revision Station" onerror="this.style.display='none'">
+    <h1>English Hangman</h1>
+    <p>🦉 The Revision Station</p>
+  </div>
+  <div id="levelScreen" class="card level-screen" style="background:white;border:3px solid var(--dark);border-radius:20px;padding:28px;box-shadow:var(--shadow-lg);">
+    <h2>Choose Your Level</h2>
+    <p>How well do you know your English vocabulary?</p>
+    <div class="level-buttons">
+      <button class="level-btn beginner" onclick="startGame('beginner')">🌱 Beginner<br><small style="font-family:Nunito;font-size:0.75rem;font-weight:700;">A1 / A2</small></button>
+      <button class="level-btn medium" onclick="startGame('medium')">📘 Medium<br><small style="font-family:Nunito;font-size:0.75rem;font-weight:700;">B1 / B2</small></button>
+      <button class="level-btn advanced" onclick="startGame('advanced')">🔥 Advanced<br><small style="font-family:Nunito;font-size:0.75rem;font-weight:700;">C1 / C2</small></button>
+    </div>
+  </div>
+  <div id="gameScreen" class="game-screen">
+    <div class="game-top">
+      <span id="levelBadge" class="level-badge">Beginner</span>
+      <span class="score-area">⭐ Score: <span id="scoreDisplay">0</span></span>
+      <button onclick="changeLevel()" style="font-family:'Fredoka One',cursive;font-size:0.9rem;background:var(--white);border:2px solid var(--dark);border-radius:10px;padding:4px 12px;cursor:pointer;box-shadow:2px 2px 0 var(--dark);">Change Level</button>
+    </div>
+    <div class="game-card" style="background:var(--white);border:3px solid var(--dark);border-radius:20px;padding:16px;box-shadow:var(--shadow-lg);">
+      <div class="hangman-wrap">
+        <svg id="hangmanSvg" viewBox="0 0 160 160">
+          <line x1="20" y1="150" x2="140" y2="150"/>
+          <line x1="60" y1="150" x2="60" y2="10"/>
+          <line x1="60" y1="10" x2="110" y2="10"/>
+          <line x1="110" y1="10" x2="110" y2="30"/>
+          <circle id="h-head" cx="110" cy="42" r="12" style="display:none"/>
+          <line id="h-body" x1="110" y1="54" x2="110" y2="100" style="display:none"/>
+          <line id="h-la" x1="110" y1="65" x2="85" y2="85" style="display:none"/>
+          <line id="h-ra" x1="110" y1="65" x2="135" y2="85" style="display:none"/>
+          <line id="h-ll" x1="110" y1="100" x2="85" y2="130" style="display:none"/>
+          <line id="h-rl" x1="110" y1="100" x2="135" y2="130" style="display:none"/>
+          <line id="h-lf" x1="85" y1="130" x2="75" y2="122" style="display:none"/>
+          <line id="h-rf" x1="135" y1="130" x2="145" y2="122" style="display:none"/>
+          <line id="h-lh" x1="85" y1="85" x2="75" y2="80" style="display:none"/>
+          <line id="h-rh" x1="135" y1="85" x2="145" y2="80" style="display:none"/>
+        </svg>
+      </div>
+      <div class="lives-bar" id="livesBar"></div>
+      <div class="word-display" id="wordDisplay"></div>
+      <div class="wrong-area">
+        <div class="wrong-label" id="wrongLabel" style="display:none">Wrong guesses:</div>
+        <div class="wrong-letters" id="wrongLetters"></div>
+      </div>
+      <div class="hint-area">
+        <button class="hint-btn" id="hintBtn" onclick="showHint()">💡 Show Hint</button>
+        <div class="hint-box" id="hintBox"></div>
+      </div>
+      <div class="keyboard" id="keyboard"></div>
+    </div>
+  </div>
+</div>
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-card">
+    <span class="result-emoji" id="resultEmoji"></span>
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-word" id="resultWord"></div>
+    <div class="result-def" id="resultDef"></div>
+    <div class="result-score">⭐ Score: <span id="resultScore"></span></div>
+    <div class="result-btns">
+      <button class="play-again-btn" onclick="playAgain()">Play Again 🎮</button>
+      <button class="change-level-btn" onclick="changeLevel()">Change Level</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── WORD LISTS ───────────────────────────────────────────────────────────────
+const words = {
+  beginner: [
+    // COLOURS
+    {word:"red",hint:"Category: Colours 🔴 — The colour of a tomato or rose"},
+    {word:"blue",hint:"Category: Colours 🔵 — The colour of the sky and sea"},
+    {word:"green",hint:"Category: Colours 🟢 — The colour of grass and leaves"},
+    {word:"yellow",hint:"Category: Colours 🟡 — The colour of the sun and bananas"},
+    {word:"orange",hint:"Category: Colours 🟠 — A mix of red and yellow"},
+    {word:"purple",hint:"Category: Colours 🟣 — A mix of red and blue"},
+    {word:"pink",hint:"Category: Colours 🩷 — A light red colour"},
+    {word:"brown",hint:"Category: Colours 🟤 — The colour of chocolate or wood"},
+    {word:"black",hint:"Category: Colours ⚫ — The darkest colour"},
+    {word:"white",hint:"Category: Colours ⚪ — The colour of snow and milk"},
+    {word:"grey",hint:"Category: Colours — British spelling — a mix of black and white"},
+    {word:"gold",hint:"Category: Colours 🟡 — A shiny yellow colour like the metal"},
+    {word:"silver",hint:"Category: Colours — A shiny pale grey colour like the metal"},
+    {word:"turquoise",hint:"Category: Colours — A blue-green colour like tropical sea water"},
+    {word:"cream",hint:"Category: Colours — A pale yellowish-white colour"},
+    {word:"navy",hint:"Category: Colours — A very dark blue colour"},
+    {word:"beige",hint:"Category: Colours — A pale sandy colour"},
+    {word:"violet",hint:"Category: Colours — A blue-purple colour"},
+    {word:"scarlet",hint:"Category: Colours — A bright red colour"},
+    {word:"maroon",hint:"Category: Colours — A dark brownish-red colour"},
+    // FRUIT
+    {word:"apple",hint:"Category: Fruit 🍎 — A red or green fruit"},
+    {word:"banana",hint:"Category: Fruit 🍌 — A long yellow curved fruit"},
+    {word:"cherry",hint:"Category: Fruit 🍒 — A small red fruit on a stalk"},
+    {word:"grape",hint:"Category: Fruit 🍇 — A small round fruit that grows in clusters"},
+    {word:"kiwi",hint:"Category: Fruit 🥝 — A small brown fruit with green flesh"},
+    {word:"lemon",hint:"Category: Fruit 🍋 — A yellow sour fruit"},
+    {word:"lime",hint:"Category: Fruit — A small green sour fruit, like a lemon"},
+    {word:"mango",hint:"Category: Fruit 🥭 — A tropical orange fruit"},
+    {word:"melon",hint:"Category: Fruit 🍈 — A large juicy fruit with green skin"},
+    {word:"orange",hint:"Category: Fruit 🍊 — A round orange-coloured citrus fruit"},
+    {word:"peach",hint:"Category: Fruit 🍑 — A soft sweet fruit with fuzzy skin"},
+    {word:"pear",hint:"Category: Fruit 🍐 — A green or yellow teardrop-shaped fruit"},
+    {word:"pineapple",hint:"Category: Fruit 🍍 — A tropical fruit with spiky skin and yellow flesh"},
+    {word:"plum",hint:"Category: Fruit — A small dark purple or red fruit"},
+    {word:"raspberry",hint:"Category: Fruit — A soft red berry"},
+    {word:"strawberry",hint:"Category: Fruit 🍓 — A small red fruit with seeds on the outside"},
+    {word:"watermelon",hint:"Category: Fruit 🍉 — A large green fruit with red flesh"},
+    {word:"blueberry",hint:"Category: Fruit — A small dark blue berry"},
+    {word:"coconut",hint:"Category: Fruit 🥥 — A large brown tropical fruit with white flesh"},
+    {word:"fig",hint:"Category: Fruit — A small soft sweet fruit with edible seeds"},
+    {word:"grapefruit",hint:"Category: Fruit — A large sharp-tasting citrus fruit"},
+    {word:"nectarine",hint:"Category: Fruit — A smooth-skinned fruit like a peach"},
+    {word:"papaya",hint:"Category: Fruit — A tropical orange fruit"},
+    {word:"pomegranate",hint:"Category: Fruit — A round fruit full of red seeds"},
+    // VEGETABLES
+    {word:"broccoli",hint:"Category: Vegetables 🥦 — A green vegetable with a tree-like shape"},
+    {word:"cabbage",hint:"Category: Vegetables 🥬 — A round green leafy vegetable"},
+    {word:"carrot",hint:"Category: Vegetables 🥕 — An orange root vegetable"},
+    {word:"cauliflower",hint:"Category: Vegetables — A white vegetable similar to broccoli"},
+    {word:"celery",hint:"Category: Vegetables — A long crunchy green vegetable"},
+    {word:"courgette",hint:"Category: Vegetables 🥒 — British English — a green vegetable (US: zucchini)"},
+    {word:"cucumber",hint:"Category: Vegetables 🥒 — A long green salad vegetable"},
+    {word:"garlic",hint:"Category: Vegetables 🧄 — A strong-smelling bulb used for flavouring"},
+    {word:"leek",hint:"Category: Vegetables — A long white and green vegetable, like a large spring onion"},
+    {word:"lettuce",hint:"Category: Vegetables 🥬 — A leafy green vegetable used in salads"},
+    {word:"mushroom",hint:"Category: Vegetables 🍄 — A fungus with a round cap"},
+    {word:"onion",hint:"Category: Vegetables 🧅 — Makes your eyes water when you cut it"},
+    {word:"parsnip",hint:"Category: Vegetables — A pale root vegetable, like a white carrot"},
+    {word:"peas",hint:"Category: Vegetables — Small round green vegetables in a pod"},
+    {word:"pepper",hint:"Category: Vegetables 🫑 — A crunchy colourful vegetable"},
+    {word:"potato",hint:"Category: Vegetables 🥔 — A starchy root vegetable"},
+    {word:"pumpkin",hint:"Category: Vegetables 🎃 — A large orange vegetable"},
+    {word:"spinach",hint:"Category: Vegetables — Dark green leafy vegetable"},
+    {word:"sweetcorn",hint:"Category: Vegetables 🌽 — Yellow kernels on a cob — British English"},
+    {word:"tomato",hint:"Category: Vegetables 🍅 — A red fruit often used as a vegetable in cooking"},
+    {word:"turnip",hint:"Category: Vegetables — A round white root vegetable"},
+    // FURNITURE
+    {word:"armchair",hint:"Category: Furniture 🛋️ — A comfortable chair with armrests"},
+    {word:"bed",hint:"Category: Furniture 🛏️ — You sleep in it"},
+    {word:"bench",hint:"Category: Furniture — A long seat for several people"},
+    {word:"bookcase",hint:"Category: Furniture 📚 — A piece of furniture for storing books"},
+    {word:"cabinet",hint:"Category: Furniture — A cupboard with shelves or drawers"},
+    {word:"chair",hint:"Category: Furniture 🪑 — A seat with a back for one person"},
+    {word:"chest",hint:"Category: Furniture — A large box for storing things"},
+    {word:"cupboard",hint:"Category: Furniture — A piece of furniture with shelves and doors"},
+    {word:"curtains",hint:"Category: Furniture — Fabric hung over windows"},
+    {word:"cushion",hint:"Category: Furniture — A soft pad for comfort on seats"},
+    {word:"desk",hint:"Category: Furniture 🖥️ — A table for working or studying at"},
+    {word:"drawer",hint:"Category: Furniture — A sliding box for storing things"},
+    {word:"dresser",hint:"Category: Furniture — A chest of drawers for clothes"},
+    {word:"lamp",hint:"Category: Furniture 💡 — A light you place on a table"},
+    {word:"mattress",hint:"Category: Furniture 🛏️ — The padded part of a bed"},
+    {word:"mirror",hint:"Category: Furniture 🪞 — A reflective surface you look into"},
+    {word:"rug",hint:"Category: Furniture — A small carpet placed on the floor"},
+    {word:"shelves",hint:"Category: Furniture — Flat boards on a wall for storing things"},
+    {word:"sofa",hint:"Category: Furniture 🛋️ — A long comfortable seat for several people"},
+    {word:"stool",hint:"Category: Furniture — A seat without a back or arms"},
+    {word:"table",hint:"Category: Furniture — A flat surface on legs"},
+    {word:"wardrobe",hint:"Category: Furniture 🚪 — A large cupboard for hanging clothes"},
+    // CLOTHES
+    {word:"belt",hint:"Category: Clothes — Worn around the waist to hold up trousers"},
+    {word:"blouse",hint:"Category: Clothes 👚 — A smart top worn by women"},
+    {word:"boots",hint:"Category: Clothes 👢 — Footwear that covers the ankle"},
+    {word:"cap",hint:"Category: Clothes 🧢 — A hat with a peak at the front"},
+    {word:"cardigan",hint:"Category: Clothes — A knitted top that buttons up the front"},
+    {word:"coat",hint:"Category: Clothes 🧥 — A warm outer garment for winter"},
+    {word:"dress",hint:"Category: Clothes 👗 — A one-piece garment worn by women"},
+    {word:"gloves",hint:"Category: Clothes 🧤 — Worn on hands to keep warm"},
+    {word:"hat",hint:"Category: Clothes 🎩 — Worn on the head"},
+    {word:"hoodie",hint:"Category: Clothes 👕 — A casual top with a hood"},
+    {word:"jacket",hint:"Category: Clothes 🧥 — A short coat"},
+    {word:"jeans",hint:"Category: Clothes 👖 — Trousers made from denim"},
+    {word:"jumper",hint:"Category: Clothes 🧶 — British English for a warm knitted top (US: sweater)"},
+    {word:"leggings",hint:"Category: Clothes — Tight stretchy trousers"},
+    {word:"pyjamas",hint:"Category: Clothes 😴 — Clothes worn to sleep in"},
+    {word:"raincoat",hint:"Category: Clothes 🌧️ — A waterproof coat for rainy weather"},
+    {word:"sandals",hint:"Category: Clothes 👡 — Open shoes worn in summer"},
+    {word:"scarf",hint:"Category: Clothes 🧣 — Worn around the neck to keep warm"},
+    {word:"shirt",hint:"Category: Clothes 👕 — Worn on your top half, often with buttons"},
+    {word:"shorts",hint:"Category: Clothes 🩳 — Short trousers worn in summer"},
+    {word:"skirt",hint:"Category: Clothes 👗 — A garment that hangs from the waist"},
+    {word:"slippers",hint:"Category: Clothes 🥿 — Soft shoes worn indoors"},
+    {word:"socks",hint:"Category: Clothes 🧦 — Worn on your feet inside shoes"},
+    {word:"suit",hint:"Category: Clothes 👔 — A matching jacket and trousers for formal occasions"},
+    {word:"sunglasses",hint:"Category: Clothes 🕶️ — Worn to protect your eyes from the sun"},
+    {word:"tie",hint:"Category: Clothes 👔 — A long piece of fabric worn around the neck"},
+    {word:"tights",hint:"Category: Clothes — Thin hosiery covering legs and feet"},
+    {word:"tracksuit",hint:"Category: Clothes 🏃 — A matching top and trousers for sport"},
+    {word:"trainers",hint:"Category: Clothes 👟 — British English for sports shoes (US: sneakers)"},
+    {word:"trousers",hint:"Category: Clothes 👖 — British English for pants covering both legs"},
+    {word:"wellies",hint:"Category: Clothes 🥾 — British slang for Wellington boots worn in mud"},
+    // HOBBIES
+    {word:"baking",hint:"Category: Hobbies 🍞 — Making bread, cakes and biscuits in the oven"},
+    {word:"camping",hint:"Category: Hobbies ⛺ — Sleeping outdoors in a tent"},
+    {word:"chess",hint:"Category: Hobbies ♟️ — A strategy board game with kings and queens"},
+    {word:"cooking",hint:"Category: Hobbies 🍳 — Preparing food"},
+    {word:"crafts",hint:"Category: Hobbies ✂️ — Making things with your hands"},
+    {word:"cycling",hint:"Category: Hobbies 🚴 — Riding a bicycle"},
+    {word:"dancing",hint:"Category: Hobbies 💃 — Moving your body to music"},
+    {word:"drawing",hint:"Category: Hobbies ✏️ — Making pictures with a pencil or pen"},
+    {word:"fishing",hint:"Category: Hobbies 🎣 — Catching fish with a rod"},
+    {word:"gardening",hint:"Category: Hobbies 🌱 — Growing plants and flowers"},
+    {word:"hiking",hint:"Category: Hobbies 🥾 — Walking long distances in the countryside"},
+    {word:"jogging",hint:"Category: Hobbies 🏃 — Running slowly for exercise"},
+    {word:"karaoke",hint:"Category: Hobbies 🎤 — Singing along to music with on-screen lyrics"},
+    {word:"knitting",hint:"Category: Hobbies 🧶 — Making fabric from wool using needles"},
+    {word:"painting",hint:"Category: Hobbies 🎨 — Making pictures using paints"},
+    {word:"photography",hint:"Category: Hobbies 📷 — Taking photos"},
+    {word:"pottery",hint:"Category: Hobbies 🏺 — Making objects from clay"},
+    {word:"reading",hint:"Category: Hobbies 📖 — Looking at and understanding written words"},
+    {word:"sailing",hint:"Category: Hobbies ⛵ — Travelling on water in a boat with sails"},
+    {word:"sewing",hint:"Category: Hobbies 🪡 — Joining fabric using needle and thread"},
+    {word:"singing",hint:"Category: Hobbies 🎵 — Making music with your voice"},
+    {word:"skating",hint:"Category: Hobbies ⛸️ — Moving on ice or wheels with special boots"},
+    {word:"skiing",hint:"Category: Hobbies ⛷️ — Moving on snow using long narrow boards"},
+    {word:"surfing",hint:"Category: Hobbies 🏄 — Riding waves on a board"},
+    {word:"swimming",hint:"Category: Hobbies 🏊 — Moving through water"},
+    {word:"travelling",hint:"Category: Hobbies ✈️ — Going to different places"},
+    {word:"volunteering",hint:"Category: Hobbies 🤝 — Giving your time to help others for free"},
+    {word:"yoga",hint:"Category: Hobbies 🧘 — An exercise combining movement and breathing"},
+    // SPORTS
+    {word:"archery",hint:"Category: Sports 🏹 — Shooting arrows at a target"},
+    {word:"athletics",hint:"Category: Sports 🏃 — Track and field sports like running and jumping"},
+    {word:"badminton",hint:"Category: Sports 🏸 — A racket sport played with a shuttlecock"},
+    {word:"basketball",hint:"Category: Sports 🏀 — A ball sport where you score by throwing into a hoop"},
+    {word:"boxing",hint:"Category: Sports 🥊 — A combat sport where you punch an opponent"},
+    {word:"climbing",hint:"Category: Sports 🧗 — Going up rocks or walls"},
+    {word:"cricket",hint:"Category: Sports 🏏 — A bat and ball sport played in England"},
+    {word:"diving",hint:"Category: Sports 🤿 — Jumping into water or swimming underwater"},
+    {word:"fencing",hint:"Category: Sports 🤺 — A sword-fighting sport"},
+    {word:"football",hint:"Category: Sports ⚽ — British English for soccer — played with a round ball"},
+    {word:"golf",hint:"Category: Sports ⛳ — A sport where you hit a ball into holes"},
+    {word:"gymnastics",hint:"Category: Sports 🤸 — An athletic sport with flips and balances"},
+    {word:"handball",hint:"Category: Sports 🤾 — A team sport where you throw a ball into a goal"},
+    {word:"hockey",hint:"Category: Sports 🏑 — A sport played with a stick and ball on grass or ice"},
+    {word:"judo",hint:"Category: Sports 🥋 — A Japanese martial art"},
+    {word:"karate",hint:"Category: Sports 🥋 — A Japanese combat sport using kicks and punches"},
+    {word:"netball",hint:"Category: Sports 🏀 — A popular British team sport similar to basketball"},
+    {word:"rowing",hint:"Category: Sports 🚣 — Moving a boat using oars"},
+    {word:"rugby",hint:"Category: Sports 🏉 — A British sport played with an oval ball"},
+    {word:"snooker",hint:"Category: Sports 🎱 — A British cue sport played on a large table"},
+    {word:"tennis",hint:"Category: Sports 🎾 — A racket sport played over a net"},
+    {word:"volleyball",hint:"Category: Sports 🏐 — A team sport where you hit a ball over a net"},
+    {word:"weightlifting",hint:"Category: Sports 🏋️ — Lifting heavy weights as a sport"},
+    {word:"wrestling",hint:"Category: Sports 🤼 — A combat sport where opponents grapple"},
+    // AROUND THE CITY
+    {word:"airport",hint:"Category: City ✈️ — A place where planes take off and land"},
+    {word:"bakery",hint:"Category: City 🍞 — A shop that sells bread and cakes"},
+    {word:"bank",hint:"Category: City 🏦 — A place to keep and manage money"},
+    {word:"bookshop",hint:"Category: City 📚 — A shop that sells books — British English"},
+    {word:"bridge",hint:"Category: City 🌉 — A structure built over a river or road"},
+    {word:"bus stop",hint:"Category: City 🚌 — Where you wait for a bus"},
+    {word:"butcher",hint:"Category: City 🥩 — A shop that sells meat"},
+    {word:"cafe",hint:"Category: City ☕ — A small restaurant selling drinks and snacks"},
+    {word:"campsite",hint:"Category: City ⛺ — An area where people put up tents"},
+    {word:"car park",hint:"Category: City 🚗 — British English for a place to park cars (US: parking lot)"},
+    {word:"castle",hint:"Category: City 🏰 — A large historic fortified building"},
+    {word:"cathedral",hint:"Category: City ⛪ — A very large important church"},
+    {word:"cemetery",hint:"Category: City — A place where people are buried"},
+    {word:"chemist",hint:"Category: City 💊 — British English for a pharmacy"},
+    {word:"cinema",hint:"Category: City 🎬 — British English for a movie theatre"},
+    {word:"circus",hint:"Category: City 🎪 — A travelling show with acrobats and performers"},
+    {word:"council",hint:"Category: City 🏛️ — The local government organisation"},
+    {word:"crossroads",hint:"Category: City — A place where two roads cross"},
+    {word:"estate",hint:"Category: City 🏘️ — A group of houses built together"},
+    {word:"factory",hint:"Category: City 🏭 — A building where goods are made"},
+    {word:"fire station",hint:"Category: City 🚒 — Where fire engines and firefighters are based"},
+    {word:"fountain",hint:"Category: City ⛲ — A decorative structure that shoots water"},
+    {word:"gallery",hint:"Category: City 🖼️ — A place displaying art"},
+    {word:"harbour",hint:"Category: City ⚓ — A sheltered area of water for boats"},
+    {word:"hospital",hint:"Category: City 🏥 — A place where sick or injured people are treated"},
+    {word:"hotel",hint:"Category: City 🏨 — A building where you pay to sleep"},
+    {word:"library",hint:"Category: City 📚 — A place to borrow books for free"},
+    {word:"market",hint:"Category: City 🛒 — An outdoor place to buy food and goods"},
+    {word:"mosque",hint:"Category: City 🕌 — A Muslim place of worship"},
+    {word:"museum",hint:"Category: City 🏛️ — A place displaying historical or cultural objects"},
+    {word:"nightclub",hint:"Category: City 🎶 — A place for dancing and music at night"},
+    {word:"park",hint:"Category: City 🌳 — An outdoor area for relaxing and recreation"},
+    {word:"pharmacy",hint:"Category: City 💊 — A shop that sells medicines"},
+    {word:"police station",hint:"Category: City 👮 — Where police officers work"},
+    {word:"post office",hint:"Category: City 📮 — Where you send letters and parcels"},
+    {word:"pub",hint:"Category: City 🍺 — A British social venue serving drinks"},
+    {word:"roundabout",hint:"Category: City 🔄 — A circular road junction — very British!"},
+    {word:"school",hint:"Category: City 🏫 — A place where children learn"},
+    {word:"shopping centre",hint:"Category: City 🛍️ — British English for a mall"},
+    {word:"stadium",hint:"Category: City 🏟️ — A large venue for sport or concerts"},
+    {word:"supermarket",hint:"Category: City 🛒 — A large shop selling food and household items"},
+    {word:"synagogue",hint:"Category: City ✡️ — A Jewish place of worship"},
+    {word:"temple",hint:"Category: City 🛕 — A religious building"},
+    {word:"theatre",hint:"Category: City 🎭 — British spelling — a place for live performances"},
+    {word:"town hall",hint:"Category: City 🏛️ — The main local government building"},
+    {word:"university",hint:"Category: City 🎓 — A place of higher education after school"},
+    {word:"zebra crossing",hint:"Category: City 🦓 — British English for a pedestrian crossing with black and white stripes"},
+    // FAMILY
+    {word:"aunt",hint:"Category: Family 👩 — Your parent's sister"},
+    {word:"brother",hint:"Category: Family 👦 — A male sibling"},
+    {word:"cousin",hint:"Category: Family — The child of your aunt or uncle"},
+    {word:"daughter",hint:"Category: Family 👧 — A female child"},
+    {word:"father",hint:"Category: Family 👨 — A male parent"},
+    {word:"fiancé",hint:"Category: Family 💍 — A man who is engaged to be married"},
+    {word:"fiancée",hint:"Category: Family 💍 — A woman who is engaged to be married"},
+    {word:"godfather",hint:"Category: Family — A man who promises to help raise a child"},
+    {word:"godmother",hint:"Category: Family — A woman who promises to help raise a child"},
+    {word:"granddaughter",hint:"Category: Family 👧 — Your child's daughter"},
+    {word:"grandfather",hint:"Category: Family 👴 — Your parent's father"},
+    {word:"grandmother",hint:"Category: Family 👵 — Your parent's mother"},
+    {word:"grandson",hint:"Category: Family 👦 — Your child's son"},
+    {word:"husband",hint:"Category: Family 👨 — A married man"},
+    {word:"mother",hint:"Category: Family 👩 — A female parent"},
+    {word:"nephew",hint:"Category: Family 👦 — Your brother or sister's son"},
+    {word:"niece",hint:"Category: Family 👧 — Your brother or sister's daughter"},
+    {word:"partner",hint:"Category: Family 💑 — The person you are in a relationship with"},
+    {word:"sister",hint:"Category: Family 👧 — A female sibling"},
+    {word:"son",hint:"Category: Family 👦 — A male child"},
+    {word:"stepfather",hint:"Category: Family — A man who married your parent but is not your biological father"},
+    {word:"stepmother",hint:"Category: Family — A woman who married your parent but is not your biological mother"},
+    {word:"twins",hint:"Category: Family 👯 — Two children born at the same time to the same mother"},
+    {word:"uncle",hint:"Category: Family 👨 — Your parent's brother"},
+    {word:"wife",hint:"Category: Family 👩 — A married woman"},
+    // ANIMALS
+    {word:"bear",hint:"Category: Animals 🐻 — A large furry animal that hibernates"},
+    {word:"butterfly",hint:"Category: Insects 🦋 — A beautiful winged insect"},
+    {word:"camel",hint:"Category: Animals 🐪 — A desert animal with a hump"},
+    {word:"cat",hint:"Category: Animals 🐱 — A popular pet that meows"},
+    {word:"cow",hint:"Category: Animals 🐄 — A farm animal that gives milk"},
+    {word:"crocodile",hint:"Category: Animals 🐊 — A large reptile with sharp teeth"},
+    {word:"deer",hint:"Category: Animals 🦌 — A graceful animal with antlers"},
+    {word:"dog",hint:"Category: Animals 🐕 — A popular pet that barks"},
+    {word:"dolphin",hint:"Category: Animals 🐬 — An intelligent marine mammal"},
+    {word:"duck",hint:"Category: Animals 🦆 — A water bird that quacks"},
+    {word:"eagle",hint:"Category: Animals 🦅 — A large bird of prey"},
+    {word:"elephant",hint:"Category: Animals 🐘 — The largest land animal with a trunk"},
+    {word:"fox",hint:"Category: Animals 🦊 — A red-brown wild animal with a bushy tail"},
+    {word:"frog",hint:"Category: Animals 🐸 — A green amphibian that jumps"},
+    {word:"giraffe",hint:"Category: Animals 🦒 — The tallest animal"},
+    {word:"gorilla",hint:"Category: Animals 🦍 — A large primate from Africa"},
+    {word:"hamster",hint:"Category: Animals 🐹 — A small furry pet that runs on a wheel"},
+    {word:"hedgehog",hint:"Category: Animals 🦔 — A small animal covered in spines"},
+    {word:"horse",hint:"Category: Animals 🐴 — A large animal you can ride"},
+    {word:"kangaroo",hint:"Category: Animals 🦘 — An Australian animal with a pouch"},
+    {word:"koala",hint:"Category: Animals 🐨 — An Australian animal that eats eucalyptus"},
+    {word:"lion",hint:"Category: Animals 🦁 — The king of the jungle"},
+    {word:"monkey",hint:"Category: Animals 🐒 — A clever primate that swings in trees"},
+    {word:"owl",hint:"Category: Animals 🦉 — A wise-looking bird that hoots at night"},
+    {word:"parrot",hint:"Category: Animals 🦜 — A colourful bird that can copy speech"},
+    {word:"penguin",hint:"Category: Animals 🐧 — A black and white bird that cannot fly"},
+    {word:"rabbit",hint:"Category: Animals 🐰 — A fluffy animal with long ears"},
+    {word:"shark",hint:"Category: Animals 🦈 — A large predatory fish"},
+    {word:"snake",hint:"Category: Animals 🐍 — A long reptile with no legs"},
+    {word:"tiger",hint:"Category: Animals 🐯 — A large orange and black striped cat"},
+    {word:"turtle",hint:"Category: Animals 🐢 — A slow reptile with a hard shell"},
+    {word:"whale",hint:"Category: Animals 🐋 — The largest animal in the ocean"},
+    {word:"zebra",hint:"Category: Animals 🦓 — A black and white striped African animal"},
+    // FOOD & DRINK
+    {word:"bread",hint:"Category: Food 🍞 — Made from flour, you toast it"},
+    {word:"butter",hint:"Category: Food 🧈 — A yellow spread made from cream"},
+    {word:"cake",hint:"Category: Food 🎂 — A sweet baked treat"},
+    {word:"cheese",hint:"Category: Food 🧀 — Made from milk, often on pizza"},
+    {word:"chips",hint:"Category: Food 🍟 — Fried potato slices — British English!"},
+    {word:"chocolate",hint:"Category: Food 🍫 — A sweet brown treat"},
+    {word:"coffee",hint:"Category: Drinks ☕ — A hot drink made from roasted beans"},
+    {word:"egg",hint:"Category: Food 🥚 — Laid by a chicken, used in cooking"},
+    {word:"honey",hint:"Category: Food 🍯 — A sweet sticky substance made by bees"},
+    {word:"juice",hint:"Category: Drinks 🍊 — A fruity drink"},
+    {word:"milk",hint:"Category: Drinks 🥛 — A white drink from cows"},
+    {word:"pasta",hint:"Category: Food 🍝 — An Italian food made from flour and water"},
+    {word:"pizza",hint:"Category: Food 🍕 — A round flat bread with toppings"},
+    {word:"rice",hint:"Category: Food 🍚 — Small white grains eaten with curry"},
+    {word:"salad",hint:"Category: Food 🥗 — Made with lettuce and vegetables"},
+    {word:"sandwich",hint:"Category: Food 🥪 — Two slices of bread with a filling"},
+    {word:"soup",hint:"Category: Food 🍲 — A hot liquid meal"},
+    {word:"spaghetti",hint:"Category: Food 🍝 — Long thin pasta strands"},
+    {word:"sugar",hint:"Category: Food 🍬 — Makes things sweet"},
+    {word:"toast",hint:"Category: Food 🍞 — Bread heated until golden brown"},
+    {word:"water",hint:"Category: Drinks 💧 — A clear liquid essential for life"},
+    // BODY
+    {word:"ankle",hint:"Category: Body — The joint connecting your foot and leg"},
+    {word:"elbow",hint:"Category: Body — The joint in the middle of your arm"},
+    {word:"eyebrow",hint:"Category: Body — The line of hair above your eye"},
+    {word:"finger",hint:"Category: Body ☝️ — You have five on each hand"},
+    {word:"forehead",hint:"Category: Body — The part of your face above your eyes"},
+    {word:"knee",hint:"Category: Body 🦵 — The joint in the middle of your leg"},
+    {word:"muscle",hint:"Category: Body 💪 — Tissue that makes you move"},
+    {word:"neck",hint:"Category: Body — Connects your head to your body"},
+    {word:"shoulder",hint:"Category: Body — Connects your arm to your body"},
+    {word:"stomach",hint:"Category: Body — The organ that digests food"},
+    {word:"thumb",hint:"Category: Body 👍 — The short thick finger on the side of your hand"},
+    {word:"tongue",hint:"Category: Body 👅 — The muscle in your mouth for tasting"},
+    {word:"wrist",hint:"Category: Body — The joint between your hand and arm"},
+    // WEATHER
+    {word:"blizzard",hint:"Category: Weather ❄️ — A severe snowstorm with strong winds"},
+    {word:"cloudy",hint:"Category: Weather ☁️ — When the sky is covered in clouds"},
+    {word:"drizzle",hint:"Category: Weather 🌧️ — Light fine rain"},
+    {word:"fog",hint:"Category: Weather 🌫️ — Thick mist that makes it hard to see"},
+    {word:"frost",hint:"Category: Weather ❄️ — Ice crystals on surfaces in cold weather"},
+    {word:"hail",hint:"Category: Weather 🌨️ — Ice balls that fall like rain"},
+    {word:"rainbow",hint:"Category: Weather 🌈 — Colourful arc in the sky after rain"},
+    {word:"shower",hint:"Category: Weather 🚿 — A brief period of rain"},
+    {word:"snow",hint:"Category: Weather ❄️ — White frozen water from the sky"},
+    {word:"storm",hint:"Category: Weather ⛈️ — Lots of rain, wind and lightning"},
+    {word:"sunny",hint:"Category: Weather ☀️ — Bright and warm outside"},
+    {word:"thunder",hint:"Category: Weather 🌩️ — A loud rumbling sound in a storm"},
+    {word:"windy",hint:"Category: Weather 💨 — When the wind is blowing strongly"},
+    // TRANSPORT
+    {word:"bicycle",hint:"Category: Transport 🚲 — A vehicle with two wheels and pedals"},
+    {word:"boat",hint:"Category: Transport ⛵ — A small vessel on water"},
+    {word:"bus",hint:"Category: Transport 🚌 — A large vehicle for many passengers"},
+    {word:"ferry",hint:"Category: Transport ⛴️ — A boat transporting people across water"},
+    {word:"helicopter",hint:"Category: Transport 🚁 — An aircraft with rotating blades"},
+    {word:"lorry",hint:"Category: Transport 🚛 — British English for a large goods vehicle"},
+    {word:"motorcycle",hint:"Category: Transport 🏍️ — A two-wheeled motor vehicle"},
+    {word:"taxi",hint:"Category: Transport 🚕 — A car you pay to take you somewhere"},
+    {word:"tram",hint:"Category: Transport 🚃 — An electric vehicle on rails in a city"},
+    {word:"train",hint:"Category: Transport 🚂 — Travels on rails"},
+    {word:"underground",hint:"Category: Transport 🚇 — British English for the subway"},
+    // HOUSE
+    {word:"attic",hint:"Category: House 🏠 — A room or space under the roof"},
+    {word:"balcony",hint:"Category: House 🏢 — A platform outside an upstairs room"},
+    {word:"bathroom",hint:"Category: House 🛁 — A room with a bath and shower"},
+    {word:"bedroom",hint:"Category: House 🛏️ — A room where you sleep"},
+    {word:"ceiling",hint:"Category: House — The upper surface inside a room"},
+    {word:"chimney",hint:"Category: House 🏠 — A structure releasing smoke from a fireplace"},
+    {word:"cooker",hint:"Category: Kitchen 🍳 — British English for a stove"},
+    {word:"fridge",hint:"Category: Kitchen ❄️ — Keeps food cold"},
+    {word:"garden",hint:"Category: House 🌱 — An outdoor area with plants"},
+    {word:"kettle",hint:"Category: Kitchen ☕ — Heats water for tea — very British!"},
+    {word:"kitchen",hint:"Category: House 🍳 — The room where you cook"},
+    {word:"lounge",hint:"Category: House 🛋️ — British English for living room"},
+    {word:"stairs",hint:"Category: House 🏠 — Steps connecting different floors"},
+    {word:"tap",hint:"Category: House 🚿 — British English for a faucet"},
+    {word:"toilet",hint:"Category: Bathroom 🚽 — Used for bodily waste"},
+    {word:"window",hint:"Category: House 🪟 — An opening in a wall for light and air"},
+  ],
+
+  medium: [
+    {word:"abolish",hint:"Category: Verbs — To formally end or get rid of something"},
+    {word:"absurd",hint:"Category: Adjectives — Wildly unreasonable or illogical"},
+    {word:"acclaim",hint:"Category: Nouns — Enthusiastic praise and approval"},
+    {word:"achieve",hint:"Category: Verbs — To successfully reach a goal"},
+    {word:"acquire",hint:"Category: Verbs — To obtain or gain something"},
+    {word:"amiable",hint:"Category: Adjectives — Friendly and pleasant"},
+    {word:"anxiety",hint:"Category: Feelings 😰 — A feeling of worry and nervousness"},
+    {word:"attempt",hint:"Category: Verbs — To try to do something"},
+    {word:"awkward",hint:"Category: Adjectives — Causing difficulty or embarrassment"},
+    {word:"bargain",hint:"Category: Nouns — A good deal or something bought cheaply"},
+    {word:"bravery",hint:"Category: Nouns — Courageous behaviour"},
+    {word:"capable",hint:"Category: Adjectives — Having the ability to do something"},
+    {word:"caution",hint:"Category: Nouns — Care taken to avoid danger"},
+    {word:"chaotic",hint:"Category: Adjectives — In a state of complete confusion"},
+    {word:"cherish",hint:"Category: Verbs — To protect and care for lovingly"},
+    {word:"comfort",hint:"Category: Nouns — A state of physical ease"},
+    {word:"complex",hint:"Category: Adjectives — Complicated and consisting of many parts"},
+    {word:"concern",hint:"Category: Nouns — Worry or interest about something"},
+    {word:"confuse",hint:"Category: Verbs — To make someone uncertain"},
+    {word:"consent",hint:"Category: Nouns — Permission or agreement"},
+    {word:"courage",hint:"Category: Nouns — The ability to do something frightening"},
+    {word:"curious",hint:"Category: Adjectives — Eager to know or learn something"},
+    {word:"decline",hint:"Category: Verbs — To politely refuse or to decrease"},
+    {word:"devoted",hint:"Category: Adjectives — Very loving and loyal"},
+    {word:"dialect",hint:"Category: Nouns — A regional form of a language"},
+    {word:"dilemma",hint:"Category: Nouns — A difficult choice between two options"},
+    {word:"dispute",hint:"Category: Nouns — A disagreement or argument"},
+    {word:"diverse",hint:"Category: Adjectives — Showing great variety"},
+    {word:"elegant",hint:"Category: Adjectives — Graceful and stylish"},
+    {word:"emotion",hint:"Category: Feelings ❤️ — A strong feeling such as joy or sadness"},
+    {word:"enforce",hint:"Category: Verbs — To make people obey a rule or law"},
+    {word:"enhance",hint:"Category: Verbs — To improve the quality of something"},
+    {word:"ethical",hint:"Category: Adjectives — Morally good and correct"},
+    {word:"evident",hint:"Category: Adjectives — Clearly seen or understood"},
+    {word:"exclude",hint:"Category: Verbs — To keep someone out of a group"},
+    {word:"exploit",hint:"Category: Verbs — To use selfishly for your own advantage"},
+    {word:"explore",hint:"Category: Verbs — To travel through an unfamiliar area"},
+    {word:"fantasy",hint:"Category: Nouns — Something imagined or a fiction genre"},
+    {word:"fatigue",hint:"Category: Nouns — Extreme tiredness"},
+    {word:"fiction",hint:"Category: Nouns — Literature describing imaginary events"},
+    {word:"fragile",hint:"Category: Adjectives — Easily broken or damaged"},
+    {word:"genuine",hint:"Category: Adjectives — Truly authentic"},
+    {word:"gesture",hint:"Category: Nouns — A movement expressing something"},
+    {word:"grateful",hint:"Category: Adjectives — Feeling thankful"},
+    {word:"harvest",hint:"Category: Nouns — The process of gathering crops"},
+    {word:"hostile",hint:"Category: Adjectives — Unfriendly and aggressive"},
+    {word:"imagery",hint:"Category: Literature 🎨 — Descriptive language creating mental pictures"},
+    {word:"improve",hint:"Category: Verbs — To make or become better"},
+    {word:"inherit",hint:"Category: Verbs — To receive something from someone after they die"},
+    {word:"inspire",hint:"Category: Verbs — To fill someone with motivation"},
+    {word:"involve",hint:"Category: Verbs — To include as a necessary part"},
+    {word:"journal",hint:"Category: Nouns — A daily written record of thoughts"},
+    {word:"journey",hint:"Category: Nouns — Travelling from one place to another"},
+    {word:"justice",hint:"Category: Nouns — Fair behaviour or treatment"},
+    {word:"leisure",hint:"Category: Nouns — Free time for enjoyment"},
+    {word:"logical",hint:"Category: Adjectives — Based on clear reasoning"},
+    {word:"loyalty",hint:"Category: Nouns — Faithfulness to someone"},
+    {word:"massive",hint:"Category: Adjectives — Very large in size"},
+    {word:"migrate",hint:"Category: Verbs — To move from one place to settle in another"},
+    {word:"miracle",hint:"Category: Nouns — A remarkable seemingly impossible event"},
+    {word:"monitor",hint:"Category: Verbs — To observe and check over time"},
+    {word:"mystery",hint:"Category: Nouns — Something unexplained or unknown"},
+    {word:"network",hint:"Category: Nouns — A group of interconnected people or things"},
+    {word:"neutral",hint:"Category: Adjectives — Not supporting either side"},
+    {word:"obvious",hint:"Category: Adjectives — Easily seen or understood"},
+    {word:"opinion",hint:"Category: Nouns — A personal view or judgement"},
+    {word:"outcome",hint:"Category: Nouns — The result of an action or event"},
+    {word:"passive",hint:"Category: Grammar 📝 — Receiving the action rather than doing it"},
+    {word:"poverty",hint:"Category: Nouns — The state of being extremely poor"},
+    {word:"precise",hint:"Category: Adjectives — Exact and accurate"},
+    {word:"prevent",hint:"Category: Verbs — To stop something from happening"},
+    {word:"protest",hint:"Category: Nouns — An expression of disapproval"},
+    {word:"provide",hint:"Category: Verbs — To supply or make available"},
+    {word:"purpose",hint:"Category: Nouns — The reason for which something is done"},
+    {word:"qualify",hint:"Category: Verbs — To become eligible or officially competent"},
+    {word:"radical",hint:"Category: Adjectives — Relating to fundamental or extreme change"},
+    {word:"recover",hint:"Category: Verbs — To return to normal after illness"},
+    {word:"reflect",hint:"Category: Verbs — To think deeply about something"},
+    {word:"refugee",hint:"Category: Nouns — A person forced to leave their country"},
+    {word:"release",hint:"Category: Verbs — To set free or make available"},
+    {word:"replace",hint:"Category: Verbs — To take the place of something"},
+    {word:"require",hint:"Category: Verbs — To need something"},
+    {word:"respect",hint:"Category: Nouns — Admiration for someone's qualities"},
+    {word:"restore",hint:"Category: Verbs — To return something to its original condition"},
+    {word:"revenge",hint:"Category: Nouns — Harm done in return for harm received"},
+    {word:"routine",hint:"Category: Nouns — A regular sequence of actions"},
+    {word:"scenery",hint:"Category: Nouns — Natural features of a landscape"},
+    {word:"serious",hint:"Category: Adjectives — Important and deserving careful thought"},
+    {word:"silence",hint:"Category: Nouns — Complete absence of sound"},
+    {word:"similar",hint:"Category: Adjectives — Having qualities in common"},
+    {word:"slavery",hint:"Category: History — The practice of owning other people"},
+    {word:"society",hint:"Category: Nouns — A community of people living together"},
+    {word:"species",hint:"Category: Nouns — A group of animals or plants of the same kind"},
+    {word:"startle",hint:"Category: Verbs — To cause sudden shock or surprise"},
+    {word:"strange",hint:"Category: Adjectives — Unusual or surprising"},
+    {word:"subject",hint:"Category: Grammar — The doer of an action in a sentence"},
+    {word:"success",hint:"Category: Nouns — Achieving what you set out to do"},
+    {word:"survive",hint:"Category: Verbs — To continue to live or exist"},
+    {word:"tragedy",hint:"Category: Literature 🎭 — A serious play with an unhappy ending"},
+    {word:"trigger",hint:"Category: Verbs — To cause something to start"},
+    {word:"trivial",hint:"Category: Adjectives — Of little importance"},
+    {word:"unusual",hint:"Category: Adjectives — Not commonly done or seen"},
+    {word:"variety",hint:"Category: Nouns — A range of different things"},
+    {word:"venture",hint:"Category: Nouns — A risky or daring business enterprise"},
+    {word:"vibrant",hint:"Category: Adjectives — Full of energy and enthusiasm"},
+    {word:"visible",hint:"Category: Adjectives — Able to be seen"},
+    {word:"welfare",hint:"Category: Nouns — Health, happiness and wellbeing"},
+    {word:"witness",hint:"Category: Nouns — A person who sees an event happen"},
+    // PHRASAL VERBS
+    {word:"break down",hint:"Category: Phrasal Verbs — To stop working; or to lose emotional control"},
+    {word:"break up",hint:"Category: Phrasal Verbs — To end a relationship"},
+    {word:"bring up",hint:"Category: Phrasal Verbs — To mention a topic; or to raise a child"},
+    {word:"call off",hint:"Category: Phrasal Verbs — To cancel something"},
+    {word:"carry on",hint:"Category: Phrasal Verbs — To continue doing something"},
+    {word:"catch up",hint:"Category: Phrasal Verbs — To reach the same level as others"},
+    {word:"cheer up",hint:"Category: Phrasal Verbs — To become or make someone happier"},
+    {word:"come across",hint:"Category: Phrasal Verbs — To find something by chance"},
+    {word:"drop out",hint:"Category: Phrasal Verbs — To withdraw from school or a course"},
+    {word:"fall out",hint:"Category: Phrasal Verbs — To have an argument with someone"},
+    {word:"figure out",hint:"Category: Phrasal Verbs — To understand or solve something"},
+    {word:"fill in",hint:"Category: Phrasal Verbs — British English: to complete a form"},
+    {word:"get along",hint:"Category: Phrasal Verbs — To have a good relationship with someone"},
+    {word:"get over",hint:"Category: Phrasal Verbs — To recover from something"},
+    {word:"give up",hint:"Category: Phrasal Verbs — To stop trying"},
+    {word:"go through",hint:"Category: Phrasal Verbs — To experience a difficult time"},
+    {word:"hand in",hint:"Category: Phrasal Verbs — To submit work to a teacher"},
+    {word:"keep up",hint:"Category: Phrasal Verbs — To maintain the same pace or standard"},
+    {word:"leave out",hint:"Category: Phrasal Verbs — To not include something"},
+    {word:"let down",hint:"Category: Phrasal Verbs — To disappoint someone"},
+    {word:"look after",hint:"Category: Phrasal Verbs — To take care of someone"},
+    {word:"look forward to",hint:"Category: Phrasal Verbs — To feel excited about something in the future"},
+    {word:"make up",hint:"Category: Phrasal Verbs — To invent a story; or to reconcile after an argument"},
+    {word:"pick up",hint:"Category: Phrasal Verbs — To collect someone; or to learn informally"},
+    {word:"point out",hint:"Category: Phrasal Verbs — To draw attention to something"},
+    {word:"put off",hint:"Category: Phrasal Verbs — To postpone or delay"},
+    {word:"run out of",hint:"Category: Phrasal Verbs — To have no more of something left"},
+    {word:"set up",hint:"Category: Phrasal Verbs — To start or establish something"},
+    {word:"show off",hint:"Category: Phrasal Verbs — To behave in a way that attracts attention"},
+    {word:"sort out",hint:"Category: Phrasal Verbs — British English: to organise or resolve"},
+    {word:"take off",hint:"Category: Phrasal Verbs — When a plane leaves the ground; or to remove clothes"},
+    {word:"take on",hint:"Category: Phrasal Verbs — To accept a responsibility or challenge"},
+    {word:"turn up",hint:"Category: Phrasal Verbs — To arrive; or to increase the volume"},
+    {word:"work out",hint:"Category: Phrasal Verbs — To exercise; or to find the solution"},
+    // IDIOMS
+    {word:"under the weather",hint:"Category: Idioms — Feeling slightly unwell"},
+    {word:"bite the bullet",hint:"Category: Idioms — To endure a painful situation"},
+    {word:"hit the nail",hint:"Category: Idioms — Part of 'hit the nail on the head': to be exactly right"},
+    {word:"piece of cake",hint:"Category: Idioms — Something very easy to do"},
+    {word:"break a leg",hint:"Category: Idioms — Good luck (said to performers)"},
+    {word:"spill the beans",hint:"Category: Idioms — To reveal a secret"},
+    {word:"cost an arm",hint:"Category: Idioms — Part of 'cost an arm and a leg': very expensive"},
+    {word:"once in a blue moon",hint:"Category: Idioms — Very rarely"},
+    {word:"on the fence",hint:"Category: Idioms — Unable to decide between two options"},
+    {word:"beat around the bush",hint:"Category: Idioms — To avoid the main topic"},
+    // GRAMMAR TERMS
+    {word:"adjective",hint:"Category: Grammar 📝 — A word that describes a noun (e.g. big, red, happy)"},
+    {word:"adverb",hint:"Category: Grammar 📝 — A word that modifies a verb (e.g. quickly, often)"},
+    {word:"apostrophe",hint:"Category: Punctuation — Used for contractions and possession (e.g. don't, Sarah's)"},
+    {word:"clause",hint:"Category: Grammar 📝 — A group of words containing a subject and a verb"},
+    {word:"conjunction",hint:"Category: Grammar 📝 — A word that joins clauses (e.g. and, but, because)"},
+    {word:"determiner",hint:"Category: Grammar 📝 — A word before a noun (e.g. the, a, some, my)"},
+    {word:"noun",hint:"Category: Grammar 📝 — A naming word for a person, place or thing"},
+    {word:"preposition",hint:"Category: Grammar 📝 — A word showing position or time (e.g. in, at, on)"},
+    {word:"pronoun",hint:"Category: Grammar 📝 — A word that replaces a noun (e.g. he, she, it, they)"},
+    {word:"semicolon",hint:"Category: Punctuation — Connects two related independent clauses (;)"},
+    {word:"synonym",hint:"Category: Vocabulary — A word that means the same as another word"},
+    {word:"tense",hint:"Category: Grammar 📝 — Shows when an action happens: past, present or future"},
+    {word:"verb",hint:"Category: Grammar 📝 — A doing or being word (e.g. run, is, think)"},
+  ],
+
+  advanced: [
+    {word:"aberration",hint:"Category: Nouns — A departure from what is normal or expected"},
+    {word:"abscond",hint:"Category: Verbs — To leave hurriedly and secretly to avoid consequences"},
+    {word:"abstain",hint:"Category: Verbs — To choose not to do or have something"},
+    {word:"acrimony",hint:"Category: Nouns — Bitterness or ill feeling"},
+    {word:"adamant",hint:"Category: Adjectives — Refusing to be persuaded; determined"},
+    {word:"admonish",hint:"Category: Verbs — To warn or reprimand firmly but not harshly"},
+    {word:"adversity",hint:"Category: Nouns — Difficult or unpleasant circumstances"},
+    {word:"aesthetic",hint:"Category: Adjectives — Concerned with beauty or the appreciation of beauty"},
+    {word:"affinity",hint:"Category: Nouns — A natural liking or connection between things"},
+    {word:"allegory",hint:"Category: Literature — A story where characters symbolise deeper meanings"},
+    {word:"alleviate",hint:"Category: Verbs — To make suffering less severe"},
+    {word:"altruism",hint:"Category: Nouns — Selfless concern for the wellbeing of others"},
+    {word:"ambiguous",hint:"Category: Adjectives — Open to more than one interpretation"},
+    {word:"ambivalent",hint:"Category: Adjectives — Having mixed feelings about something"},
+    {word:"anachronism",hint:"Category: Nouns — Something out of its proper historical time"},
+    {word:"anecdote",hint:"Category: Nouns — A short amusing story about a real person or event"},
+    {word:"antagonist",hint:"Category: Literature — The character who opposes the protagonist"},
+    {word:"apathy",hint:"Category: Nouns — Lack of interest, enthusiasm or concern"},
+    {word:"apprehensive",hint:"Category: Adjectives — Anxious or fearful about a future event"},
+    {word:"arbitrary",hint:"Category: Adjectives — Based on random choice rather than reason"},
+    {word:"archaic",hint:"Category: Adjectives — Very old or old-fashioned; no longer in common use"},
+    {word:"articulate",hint:"Category: Adjectives — Able to express thoughts clearly and fluently"},
+    {word:"aspiration",hint:"Category: Nouns — A hope or ambition to achieve something"},
+    {word:"assertion",hint:"Category: Nouns — A confident statement of fact or belief"},
+    {word:"assimilate",hint:"Category: Verbs — To absorb and integrate into a culture or group"},
+    {word:"atrocity",hint:"Category: Nouns — An extremely wicked or cruel act"},
+    {word:"audacious",hint:"Category: Adjectives — Showing bold willingness to take risks"},
+    {word:"austerity",hint:"Category: Nouns — Difficult economic conditions with reduced spending"},
+    {word:"authoritarian",hint:"Category: Adjectives — Favouring strict obedience to authority"},
+    {word:"autonomous",hint:"Category: Adjectives — Having the freedom to govern itself"},
+    {word:"benevolent",hint:"Category: Adjectives — Well meaning and kindly"},
+    {word:"bureaucracy",hint:"Category: Nouns — A system with many complicated rules and processes"},
+    {word:"candid",hint:"Category: Adjectives — Truthful and straightforward"},
+    {word:"capitulate",hint:"Category: Verbs — To cease to resist; to give in"},
+    {word:"catalyst",hint:"Category: Nouns — Something that causes an important event to happen"},
+    {word:"catharsis",hint:"Category: Nouns — The release of emotional tension through art or experience"},
+    {word:"censorship",hint:"Category: Nouns — The suppression of speech or other public communication"},
+    {word:"chronological",hint:"Category: Adjectives — Arranged in the order events occurred"},
+    {word:"circumvent",hint:"Category: Verbs — To find a way around an obstacle or rule"},
+    {word:"clandestine",hint:"Category: Adjectives — Kept secret or done secretively"},
+    {word:"coercion",hint:"Category: Nouns — The practice of persuading by force or threats"},
+    {word:"coherent",hint:"Category: Adjectives — Logical and consistent; easy to understand"},
+    {word:"colloquial",hint:"Category: Adjectives — Used in ordinary or familiar conversation"},
+    {word:"commemorate",hint:"Category: Verbs — To recall and show respect for a past event"},
+    {word:"complacent",hint:"Category: Adjectives — Smug and uncritically satisfied with oneself"},
+    {word:"condescending",hint:"Category: Adjectives — Behaving as if you are superior to others"},
+    {word:"connotation",hint:"Category: Language — An idea or feeling a word invokes beyond its literal meaning"},
+    {word:"conspicuous",hint:"Category: Adjectives — Standing out so as to be clearly visible"},
+    {word:"contemptuous",hint:"Category: Adjectives — Showing feelings that something is worthless"},
+    {word:"contrite",hint:"Category: Adjectives — Feeling regret or guilt for wrongdoing"},
+    {word:"controversial",hint:"Category: Adjectives — Giving rise to disagreement or debate"},
+    {word:"conviction",hint:"Category: Nouns — A firmly held belief; or a formal declaration of guilt"},
+    {word:"corruption",hint:"Category: Nouns — Dishonest or fraudulent conduct by those in power"},
+    {word:"credibility",hint:"Category: Nouns — The quality of being trusted and believed"},
+    {word:"cynical",hint:"Category: Adjectives — Distrustful of human sincerity or goodness"},
+    {word:"deceptive",hint:"Category: Adjectives — Giving a false impression"},
+    {word:"defiance",hint:"Category: Nouns — Open resistance to authority"},
+    {word:"deliberate",hint:"Category: Adjectives — Done consciously and intentionally"},
+    {word:"demagogue",hint:"Category: Nouns — A political leader who exploits prejudices and fears"},
+    {word:"democracy",hint:"Category: Politics — A system of government by the whole population"},
+    {word:"demographic",hint:"Category: Nouns — A statistical sector of a population"},
+    {word:"derogatory",hint:"Category: Adjectives — Showing a critical or disrespectful attitude"},
+    {word:"despondent",hint:"Category: Adjectives — In low spirits from loss of hope or courage"},
+    {word:"deteriorate",hint:"Category: Verbs — To become progressively worse"},
+    {word:"devastating",hint:"Category: Adjectives — Highly destructive or damaging"},
+    {word:"discrepancy",hint:"Category: Nouns — A lack of compatibility between facts or figures"},
+    {word:"disillusioned",hint:"Category: Adjectives — Disappointed that something is not as good as expected"},
+    {word:"disparity",hint:"Category: Nouns — A great difference or inequality"},
+    {word:"eloquent",hint:"Category: Adjectives — Fluent and persuasive in speaking or writing"},
+    {word:"empathy",hint:"Category: Nouns — The ability to understand and share feelings of others"},
+    {word:"empirical",hint:"Category: Adjectives — Based on observation or experience rather than theory"},
+    {word:"enigmatic",hint:"Category: Adjectives — Difficult to interpret or understand; mysterious"},
+    {word:"entrepreneur",hint:"Category: Nouns — A person who sets up a business"},
+    {word:"ephemeral",hint:"Category: Adjectives — Lasting for a very short time"},
+    {word:"epitome",hint:"Category: Nouns — A person or thing that is a perfect example of a quality"},
+    {word:"erroneous",hint:"Category: Adjectives — Wrong; based on incorrect information"},
+    {word:"euphemism",hint:"Category: Language — A mild phrase substituted for a harsh one"},
+    {word:"exacerbate",hint:"Category: Verbs — To make a problem or bad situation worse"},
+    {word:"exonerate",hint:"Category: Verbs — To officially absolve someone from blame or fault"},
+    {word:"exploitation",hint:"Category: Nouns — The action of treating someone unfairly for profit"},
+    {word:"facade",hint:"Category: Nouns — A deceptive outward appearance"},
+    {word:"fallacy",hint:"Category: Nouns — A mistaken belief or faulty reasoning"},
+    {word:"foreshadowing",hint:"Category: Literature — A warning or indication of a future event"},
+    {word:"futile",hint:"Category: Adjectives — Incapable of producing any useful result; pointless"},
+    {word:"groundbreaking",hint:"Category: Adjectives — Innovative and pioneering"},
+    {word:"hierarchy",hint:"Category: Nouns — A system with grades ranked above each other"},
+    {word:"hypocrisy",hint:"Category: Nouns — Claiming to have higher standards than is the case"},
+    {word:"ideological",hint:"Category: Adjectives — Relating to a system of ideas and ideals"},
+    {word:"impartial",hint:"Category: Adjectives — Treating all rivals equally; fair"},
+    {word:"imperialism",hint:"Category: Nouns — A policy of extending power by acquiring territories"},
+    {word:"implications",hint:"Category: Nouns — Likely consequences or effects"},
+    {word:"inadvertently",hint:"Category: Adverbs — Without intention; accidentally"},
+    {word:"inconceivable",hint:"Category: Adjectives — Not capable of being imagined or believed"},
+    {word:"indifference",hint:"Category: Nouns — Lack of interest, concern or sympathy"},
+    {word:"indigenous",hint:"Category: Adjectives — Originating or occurring naturally in a place"},
+    {word:"indoctrinate",hint:"Category: Verbs — To teach to accept ideas uncritically"},
+    {word:"inevitable",hint:"Category: Adjectives — Certain to happen; unavoidable"},
+    {word:"infrastructure",hint:"Category: Nouns — Basic physical structures needed for society to function"},
+    {word:"instigation",hint:"Category: Nouns — The act of bringing about a situation"},
+    {word:"integrity",hint:"Category: Nouns — The quality of being honest and having strong morals"},
+    {word:"intimidation",hint:"Category: Nouns — The action of frightening someone into doing something"},
+    {word:"juxtaposition",hint:"Category: Literature — Placing two contrasting things close together"},
+    {word:"lethargy",hint:"Category: Nouns — A lack of energy and enthusiasm"},
+    {word:"magnanimous",hint:"Category: Adjectives — Very generous or forgiving"},
+    {word:"manipulation",hint:"Category: Nouns — Controlling someone in a clever or unfair way"},
+    {word:"marginalise",hint:"Category: Verbs — To treat as insignificant or peripheral"},
+    {word:"melancholy",hint:"Category: Nouns — A deep, long-lasting sadness"},
+    {word:"meticulous",hint:"Category: Adjectives — Showing great attention to detail"},
+    {word:"misconstrue",hint:"Category: Verbs — To interpret something wrongly"},
+    {word:"momentum",hint:"Category: Nouns — The force gained by a moving object; or growing progress"},
+    {word:"monotonous",hint:"Category: Adjectives — Dull and tediously repetitive"},
+    {word:"moratorium",hint:"Category: Nouns — A temporary prohibition of an activity"},
+    {word:"narcissism",hint:"Category: Nouns — Excessive admiration of oneself"},
+    {word:"objectivity",hint:"Category: Nouns — The quality of being uninfluenced by personal feelings"},
+    {word:"obsolete",hint:"Category: Adjectives — No longer produced or used; out of date"},
+    {word:"omniscient",hint:"Category: Adjectives — Knowing everything — often used in narrative"},
+    {word:"oppression",hint:"Category: Nouns — Prolonged cruel or unjust treatment"},
+    {word:"ostracise",hint:"Category: Verbs — British spelling — to exclude from a society or group"},
+    {word:"paradox",hint:"Category: Nouns — A seemingly absurd statement that may be true"},
+    {word:"patronising",hint:"Category: Adjectives — British spelling — treating someone as inferior"},
+    {word:"pedantic",hint:"Category: Adjectives — Overly concerned with minor details and rules"},
+    {word:"perception",hint:"Category: Nouns — The way something is regarded or understood"},
+    {word:"persecution",hint:"Category: Nouns — Hostility and ill-treatment of a group"},
+    {word:"perspective",hint:"Category: Nouns — A particular way of thinking about something"},
+    {word:"philanthropy",hint:"Category: Nouns — Donating to promote the welfare of others"},
+    {word:"phenomenon",hint:"Category: Nouns — A fact or situation that is observed to exist"},
+    {word:"pragmatic",hint:"Category: Adjectives — Dealing with things sensibly and realistically"},
+    {word:"precedent",hint:"Category: Nouns — An earlier event used as a guide for future situations"},
+    {word:"precarious",hint:"Category: Adjectives — Not securely held; dependent on chance"},
+    {word:"preconception",hint:"Category: Nouns — A preformed opinion not based on evidence"},
+    {word:"pretentious",hint:"Category: Adjectives — Attempting to impress by affecting greater importance"},
+    {word:"propaganda",hint:"Category: Nouns — Information used to promote a political cause"},
+    {word:"protagonist",hint:"Category: Literature — The main character in a story"},
+    {word:"provocative",hint:"Category: Adjectives — Causing annoyance, anger or another reaction"},
+    {word:"reconciliation",hint:"Category: Nouns — The restoration of friendly relations"},
+    {word:"redundant",hint:"Category: Adjectives — No longer needed; or made jobless due to cutbacks"},
+    {word:"repercussion",hint:"Category: Nouns — An unintended consequence of an action"},
+    {word:"resilience",hint:"Category: Nouns — The ability to recover quickly from difficulties"},
+    {word:"retrospective",hint:"Category: Adjectives — Looking back on past events"},
+    {word:"rhetorical",hint:"Category: Adjectives — Relating to persuasive speaking or writing"},
+    {word:"satire",hint:"Category: Literature — Using humour or irony to criticise society"},
+    {word:"scrutiny",hint:"Category: Nouns — Critical observation or examination"},
+    {word:"sentimental",hint:"Category: Adjectives — Prompted by feelings of tenderness or nostalgia"},
+    {word:"simulate",hint:"Category: Verbs — To imitate the appearance or character of something"},
+    {word:"sovereignty",hint:"Category: Nouns — Supreme power or authority"},
+    {word:"spontaneous",hint:"Category: Adjectives — Performed without planning; natural"},
+    {word:"stereotype",hint:"Category: Nouns — A fixed, oversimplified image of a type of person"},
+    {word:"subversion",hint:"Category: Nouns — The undermining of power or authority"},
+    {word:"susceptible",hint:"Category: Adjectives — Likely to be influenced or harmed by something"},
+    {word:"sustainable",hint:"Category: Adjectives — Able to be maintained without depleting resources"},
+    {word:"symbolism",hint:"Category: Literature — Use of symbols to represent ideas or qualities"},
+    {word:"tenacious",hint:"Category: Adjectives — Tending to keep a firm hold; persistent"},
+    {word:"tentative",hint:"Category: Adjectives — Not certain or fixed; done as a trial"},
+    {word:"transparency",hint:"Category: Nouns — Being open and honest; easy to see through"},
+    {word:"tumultuous",hint:"Category: Adjectives — Making an uproar; very loud or troubled"},
+    {word:"tyranny",hint:"Category: Nouns — Cruel and oppressive government or rule"},
+    {word:"ubiquitous",hint:"Category: Adjectives — Present or found everywhere"},
+    {word:"undermine",hint:"Category: Verbs — To weaken or damage gradually or secretly"},
+    {word:"unprecedented",hint:"Category: Adjectives — Never done or known before"},
+    {word:"utopian",hint:"Category: Adjectives — Relating to an imagined perfect society"},
+    {word:"vague",hint:"Category: Adjectives — Not clearly expressed; uncertain"},
+    {word:"validation",hint:"Category: Nouns — Recognition or affirmation of something as valid"},
+    {word:"venerable",hint:"Category: Adjectives — Accorded great respect due to age or wisdom"},
+    {word:"vindicate",hint:"Category: Verbs — To clear someone of blame or suspicion"},
+    {word:"vulnerability",hint:"Category: Nouns — The quality of being susceptible to attack or harm"},
+    {word:"zealous",hint:"Category: Adjectives — Having or showing great energy in pursuit of a cause"},
+  ]
+};
+
+// ─── SHUFFLE + NO-REPEAT SYSTEM ──────────────────────────────────────────────
+// Each level gets its own shuffled queue. When the queue empties, it reshuffles.
+const queues = { beginner: [], medium: [], advanced: [] };
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getNextWord(level) {
+  if (queues[level].length === 0) {
+    queues[level] = shuffleArray(words[level]);
+  }
+  return queues[level].pop();
+}
+
+// ─── GAME STATE ───────────────────────────────────────────────────────────────
+const BODY_PARTS = ['h-head','h-body','h-la','h-ra','h-ll','h-rl','h-lf','h-rf','h-lh','h-rh'];
+const MAX_WRONG = BODY_PARTS.length;
+let currentWord = '';
+let currentHint = '';
+let guessedLetters = [];
+let wrongGuesses = [];
+let score = 0;
+let currentLevel = 'beginner';
+
+function startGame(level) {
+  currentLevel = level;
+  score = 0;
+  document.getElementById('levelScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'block';
+  const badge = document.getElementById('levelBadge');
+  badge.textContent = level.charAt(0).toUpperCase() + level.slice(1);
+  badge.className = 'level-badge ' + level;
+  newRound();
+}
+
+function newRound() {
+  const entry = getNextWord(currentLevel);
+  currentWord = entry.word.toLowerCase();
+  currentHint = entry.hint;
+  guessedLetters = [];
+  wrongGuesses = [];
+  BODY_PARTS.forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('hintBox').classList.remove('show');
+  document.getElementById('hintBox').textContent = '';
+  document.getElementById('wrongLabel').style.display = 'none';
+  document.getElementById('wrongLetters').innerHTML = '';
+  document.getElementById('scoreDisplay').textContent = score;
+  renderWord();
+  renderLives();
+  renderKeyboard();
+}
+
+function renderWord() {
+  const display = document.getElementById('wordDisplay');
+  display.innerHTML = '';
+  [...currentWord].forEach(ch => {
+    const box = document.createElement('div');
+    if (ch === ' ') {
+      box.className = 'letter-box space';
+    } else {
+      box.className = 'letter-box';
+      if (guessedLetters.includes(ch)) {
+        box.textContent = ch.toUpperCase();
+        box.classList.add('revealed');
+      }
+    }
+    display.appendChild(box);
+  });
+}
+
+function renderLives() {
+  const bar = document.getElementById('livesBar');
+  bar.innerHTML = '';
+  for (let i = 0; i < MAX_WRONG; i++) {
+    const h = document.createElement('span');
+    h.className = 'heart' + (i < wrongGuesses.length ? ' lost' : '');
+    h.textContent = '❤️';
+    bar.appendChild(h);
+  }
+}
+
+function renderKeyboard() {
+  const rows = [
+    ['q','w','e','r','t','y','u','i','o','p'],
+    ['a','s','d','f','g','h','j','k','l'],
+    ['z','x','c','v','b','n','m']
+  ];
+  const kb = document.getElementById('keyboard');
+  kb.innerHTML = '';
+  rows.forEach(row => {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'key-row';
+    row.forEach(letter => {
+      const btn = document.createElement('button');
+      btn.className = 'key-btn';
+      btn.textContent = letter.toUpperCase();
+      btn.setAttribute('data-letter', letter);
+      if (guessedLetters.includes(letter)) {
+        btn.classList.add(wrongGuesses.includes(letter) ? 'wrong' : 'correct');
+        btn.disabled = true;
+      }
+      btn.onclick = () => guess(letter, btn);
+      rowDiv.appendChild(btn);
+    });
+    kb.appendChild(rowDiv);
+  });
+}
+
+function guess(letter, btn) {
+  if (guessedLetters.includes(letter)) return;
+  guessedLetters.push(letter);
+  btn.disabled = true;
+  if (currentWord.includes(letter)) {
+    btn.classList.add('correct');
+    renderWord();
+    if (isWordComplete()) { endRound(true); }
+  } else {
+    btn.classList.add('wrong');
+    wrongGuesses.push(letter);
+    document.getElementById(BODY_PARTS[wrongGuesses.length - 1]).style.display = 'block';
+    renderLives();
+    document.getElementById('wrongLabel').style.display = 'block';
+    const wl = document.getElementById('wrongLetters');
+    const span = document.createElement('span');
+    span.className = 'wrong-letter';
+    span.textContent = letter.toUpperCase();
+    wl.appendChild(span);
+    if (wrongGuesses.length >= MAX_WRONG) { endRound(false); }
+  }
+}
+
+function isWordComplete() {
+  return [...currentWord].every(ch => ch === ' ' || guessedLetters.includes(ch));
+}
+
+function showHint() {
+  const box = document.getElementById('hintBox');
+  box.textContent = currentHint;
+  box.classList.add('show');
+}
+
+function endRound(won) {
+  if (won) score += Math.max(10, 50 - wrongGuesses.length * 5);
+  document.getElementById('scoreDisplay').textContent = score;
+  document.getElementById('resultEmoji').textContent = won ? '🎉' : '😬';
+  document.getElementById('resultTitle').textContent = won ? 'Well done!' : 'Unlucky!';
+  document.getElementById('resultWord').textContent = currentWord.toUpperCase();
+  document.getElementById('resultDef').textContent = currentHint;
+  document.getElementById('resultScore').textContent = score;
+  document.getElementById('resultOverlay').classList.add('show');
+}
+
+function playAgain() {
+  document.getElementById('resultOverlay').classList.remove('show');
+  newRound();
+}
+
+function changeLevel() {
+  document.getElementById('resultOverlay').classList.remove('show');
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('levelScreen').style.display = 'block';
+}
+</script>
+</body>
+</html>
